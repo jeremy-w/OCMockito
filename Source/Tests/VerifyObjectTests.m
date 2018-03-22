@@ -30,6 +30,22 @@ static inline double *createArrayOf10Doubles(void)
 - (void)methodWithStruct:(MKTStruct)aStruct { return; }
 @end
 
+@interface TestSelectorReturnsOwned : NSObject
+- (id)selectorWhoseMethodsDisagreeOnReturnType;
+@end
+
+@implementation TestSelectorReturnsOwned
+- (id)selectorWhoseMethodsDisagreeOnReturnType { return nil; }
+@end
+
+@interface TestSelectorReturnsVoid : NSObject
+- (void)selectorWhoseMethodsDisagreeOnReturnType;
+@end
+
+@implementation TestSelectorReturnsVoid
+- (void)selectorWhoseMethodsDisagreeOnReturnType { return; }
+@end
+
 
 @interface VerifyObjectTests : XCTestCase
 @end
@@ -120,7 +136,7 @@ static inline double *createArrayOf10Doubles(void)
 {
     [mockArray removeObjectAtIndex:2];
 
-    [[verify(mockArray) withMatcher:greaterThan(@1) forArgument:0]
+    [[(id<MKTNonObjectArgumentMatching>)verify(mockArray) withMatcher:greaterThan(@1) forArgument:0]
             removeObjectAtIndex:0];
 }
 
@@ -128,7 +144,7 @@ static inline double *createArrayOf10Doubles(void)
 {
     [mockArray removeObjectAtIndex:2];
 
-    [[verify(mockArray) withMatcher:greaterThan(@1)]
+    [[(id<MKTNonObjectArgumentMatching>)verify(mockArray) withMatcher:greaterThan(@1)]
             removeObjectAtIndex:0];
 }
 
@@ -140,6 +156,33 @@ static inline double *createArrayOf10Doubles(void)
     [testMock methodWithClassArg:[NSData class]];
 
     [verify(testMock) methodWithClassArg:[NSString class]];
+}
+
+/**
+ The real test here is "does this compile without error?"
+
+ With a @c verify implementation that returns @c id,
+ the compiler will error with a message like:
+
+ @code
+ OCMockito/Source/Tests/VerifyObjectTests.m:167:5: error: multiple methods named 'selectorWhoseMethodsDisagreeOnReturnType' found with mismatched result, parameter type or attributes
+ [verify(testMock) selectorWhoseMethodsDisagreeOnReturnType];
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ OCMockito/Source/Tests/VerifyObjectTests.m:34:1: note: one possibility
+ - (id)selectorWhoseMethodsDisagreeOnReturnType;
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ OCMockito/Source/Tests/VerifyObjectTests.m:42:1: note: also found
+ - (void)selectorWhoseMethodsDisagreeOnReturnType;
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ @end
+ */
+- (void)testVerify_EvenWithConflictingMethodTypesForSelector_ShouldBehaveAsIfMessagingTheMockedType
+{
+    TestSelectorReturnsOwned *testMock = mock([TestSelectorReturnsOwned class]);
+
+    [testMock selectorWhoseMethodsDisagreeOnReturnType];
+
+    [verify(testMock) selectorWhoseMethodsDisagreeOnReturnType];
 }
 
 - (void)testVerifyingMethodWithHandleArg_ShouldMatchNull

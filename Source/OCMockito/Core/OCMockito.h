@@ -229,7 +229,7 @@ FOUNDATION_EXPORT _Nullable id MKTVerifyWithLocation(id mock, id testCase, const
  * In the event of a name clash, <code>#define MKT_DISABLE_SHORT_SYNTAX</code> and use the synonym
  * MKTVerify instead.
  */
-#define verify(mock) MKTVerify(mock)
+#define verify(mock) (__typeof__(mock))MKTVerify(mock)
 #endif
 
 
